@@ -1,0 +1,101 @@
+# necessary mudules 
+import pandas as pd 
+import numpy as np
+import tensorflow as tf
+import os
+import matplotlib.pyplot as plt
+
+#Section 1. Hyper parameter parameter and variable defination
+activiation_func = tf.nn.tanh
+LEARNING_RATE = 0.001
+BATCH_SIZE = 500
+TRAINING_EPOCHS = 1500
+STDDEV = 0.1
+neuron_hidden_1 = 128           # 1st layer
+neuron_hidden_2 = 64            # 2nd layer
+neuron_hidden_3 = 32            # 3rd layer
+neuron_hidden_4 = 16            # 4th layer
+
+# define our variables X, is A B and t, y is our target
+# define intermediate variable, dropout_keep_prob
+X = tf.placeholder(tf.float32, [None, 3])
+y = tf.placeholder(tf.float32, [None, 1])
+dropout_keep_prob = tf.placeholder(tf.float32)
+
+#data input
+train_set = pd.read_csv('data_train.csv')
+test_set = pd.read_csv('data_test.csv')
+
+#section 2. define our MLP model
+def mlp(X, weights, biases, dropout_rate):
+	"""four layers MLP model with tanh activation and continous output"""
+	layer_1 = tf.nn.dropout(tf.nn.tanh(tf.add(tf.matmul(X, weights['h1']), biases['b1'])), dropout_rate)
+	layer_2 = tf.nn.dropout(tf.nn.tanh(tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])), dropout_rate)
+	layer_3 = tf.nn.dropout(tf.nn.tanh(tf.add(tf.matmul(layer_2, weights['h3']), biases['b3'])), dropout_rate)
+	layer_4 = tf.nn.dropout(tf.nn.tanh(tf.add(tf.matmul(layer_3, weights['h4']), biases['b4'])), dropout_rate)
+	output = tf.add(tf.matmul(layer_4, weights['output']), biases['output'])
+	return output
+
+#define our weights dictionary, and set initial value
+weights = {
+	'h1': tf.Variable(tf.random_normal([3, neuron_hidden_1],stddev=STDDEV)),
+	'h2': tf.Variable(tf.random_normal([neuron_hidden_1, neuron_hidden_2],stddev=STDDEV)),
+	'h3': tf.Variable(tf.random_normal([neuron_hidden_2, neuron_hidden_3],stddev=STDDEV)),
+	'h4': tf.Variable(tf.random_normal([neuron_hidden_3, neuron_hidden_4],stddev=STDDEV)),
+	'output': tf.Variable(tf.random_normal([neuron_hidden_4, 1],stddev=STDDEV)),                                   
+}
+
+#define our biases dictionary, and set initial value
+biases = {
+    'b1': tf.Variable(tf.random_normal([neuron_hidden_1])),
+    'b2': tf.Variable(tf.random_normal([neuron_hidden_2])),
+    'b3': tf.Variable(tf.random_normal([neuron_hidden_3])),
+    'b4': tf.Variable(tf.random_normal([neuron_hidden_4])),
+    'output': tf.Variable(tf.random_normal([1]))
+}
+
+# MLP modeling through mlp func
+pred = mlp(X, weights, biases, dropout_keep_prob)
+
+# define MSE loss func and set optimizer
+cost = tf.reduce_mean(tf.squared_difference(pred, y))
+optimizer = tf.train.AdamOptimizer(learning_rate = LEARNING_RATE).minimize(cost)
+
+#Section 3. the training process
+def main():
+	# Initialize variables
+	init = tf.initialize_all_variables()
+	# instantiate a tf session
+	sess = tf.Session()
+	sess.run(init)
+
+	# get feature and lable value
+	Data_train = train_set.loc[:,['A', 'B', 't']].get_values()
+	Lable_train = train_set.loc[:,['y']].get_values()
+
+	# get test feature and lable value
+	Data_test = test_set.loc[:,['A', 'B', 't']].get_values()
+	Lable_test = test_set.loc[:,['y']].get_values()
+
+	#training epoch
+	for epoch in range(TRAINING_EPOCHS):
+		total_batch = int(10000 / BATCH_SIZE)
+		# Loop over all batches
+		for i in range(total_batch):
+			randidx = np.random.randint(10000, size = BATCH_SIZE)
+			batch_xs = Data_train[randidx, :]
+			batch_ys = Lable_train[randidx, :]
+			# Fit using batched data
+			sess.run(optimizer, feed_dict={X: batch_xs, y: batch_ys, dropout_keep_prob: 1})
+		#print some statistics
+		if epoch % 100 == 0:
+			print ("Epoch: %03d/%03d " % (epoch, TRAINING_EPOCHS))
+			train_cost = sess.run(cost, feed_dict={X: batch_xs, y: batch_ys, dropout_keep_prob:1.})
+			print ("Training cost: %.3f" % (train_cost))
+	# Run on our testing set and print
+	final_MSE = sess.run(cost, feed_dict={X: Data_test, y: Lable_test, dropout_keep_prob:1.})
+	print('Testing data MSE value: {}'.format(final_MSE))
+
+if __name__ == '__main__':
+	print(os.getcwd())
+	main()
