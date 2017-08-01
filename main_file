@@ -23,8 +23,8 @@ y = tf.placeholder(tf.float32, [None, 1])
 dropout_keep_prob = tf.placeholder(tf.float32)
 
 #data input
-train_set = pd.read_csv('data_train.csv')
-test_set = pd.read_csv('data_test.csv')
+train_set = pd.read_csv('train_set.csv')
+test_set = pd.read_csv('test_set.csv')
 
 #section 2. define our MLP model
 def mlp(X, weights, biases, dropout_rate):
