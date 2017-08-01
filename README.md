@@ -1,0 +1,1 @@
+# Multilayer-Perceptron-Model-for-XOR-Gated-Variable-Detection
